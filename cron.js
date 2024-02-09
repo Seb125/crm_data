@@ -3,8 +3,8 @@ const Data = require("./models/Data.model")
 const cron = require('node-cron');
 
 
-cron.schedule('15 * * * *', async () => {
-
+cron.schedule('20 * * * *', async () => {
+    console.log("corn Job is starting")
     const moduleApiName = 'Contacts';
     const criteriaerp = '((Rolle_der_Person:equals:Anbieter)and(Thema:equals:ERP))';
     const criteriafi = '((Rolle_der_Person:equals:Anbieter)and(Thema:equals:Fabrik))';
