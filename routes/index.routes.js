@@ -9,12 +9,12 @@ router.get("/", (req, res, next) => {
 });
 
 
-router.get('/authorize', isAuthenticated, (req, res) => {
-  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCRM.settings.all&client_id=1000.IR0X01MW4WTWRAKARXJ35O7J9ZUZGP&response_type=code&access_type=offline&redirect_uri=http://localhost:5005/callback`;
+router.get('/authorize', (req, res) => {
+  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCRM.settings.all&client_id=1000.IR0X01MW4WTWRAKARXJ35O7J9ZUZGP&response_type=code&access_type=offline&redirect_uri=https://crm-statistics.adaptable.app/callback`;
   res.redirect(authUrl);
 });
 
-router.get('/callback', isAuthenticated, async (req, res) => {
+router.get('/callback', async (req, res) => {
   const code = req.query.code;
   console.log(code)
   const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
