@@ -28,12 +28,12 @@ router.get('/callback', async (req, res) => {
 
   try {
     const response = await axios.post(tokenUrl, params);
-    const accessToken = response.data.access_token;
+    
     console.log("all good so far")
     // Use the access token to make API requests to Zoho CRM
     // ...
 
-    res.send(response);
+    res.status(200).json({response: response.data });
   } catch (error) {
     console.error('Error getting access token:', error.message);
     res.status(500).send('Error getting access token');
