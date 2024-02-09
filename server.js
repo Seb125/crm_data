@@ -2,7 +2,7 @@ const app = require("./app");
 const cron = require('node-cron');
 
 
-cron.schedule('0 * * * *', () => {
+cron.schedule('* * * * *', () => {
   // Your task logic goes here
   console.log('Cron job executed!');
 });
