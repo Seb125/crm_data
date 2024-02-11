@@ -127,7 +127,7 @@ router.get("/verify", (req, res, next) => {
     const verify = jwt.verify(token, process.env.TOKEN_SECRET);
     res.status(202).json(verify);
   } catch (err) {
-    res.json({ errorMessage: err });
+    res.status(401).json({ errorMessage: err });
   }
 });
 
