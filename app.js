@@ -13,6 +13,17 @@ const express = require("express");
 
 const app = express();
 
+// Middleware to set CORS headers
+app.use((req, res, next) => {
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, Content-Type');
+
+    // Continue to the next middleware or route handler
+    next();
+});
+
 // ℹ️ This function is getting exported from the config folder. It runs most pieces of middleware
 require("./config")(app);
 
