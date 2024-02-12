@@ -11,7 +11,7 @@ router.get("/", (req, res, next) => {
 
 
 router.get('/authorize', (req, res) => {
-  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCRM.settings.all&client_id=1000.IR0X01MW4WTWRAKARXJ35O7J9ZUZGP&response_type=code&access_type=offline&redirect_uri=https://crm-statistics.adaptable.app/callback`;
+  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCRM.settings.all&client_id=${process.env.CLIENTID}&response_type=code&access_type=offline&redirect_uri=https://crm-statistics.adaptable.app/callback`;
   res.redirect(authUrl);
 });
 
@@ -52,7 +52,7 @@ router.get("/getData" , isAuthenticated, async (req, res) => {
 });
 
 router.post("/updateData", async (req, res) => {
-  console.log("Updating is starting")
+  res.json({ message: "Scheduled task started!" });
   const moduleApiName = 'Contacts';
   const criteriaerp = '((Rolle_der_Person:equals:Anbieter)and(Thema:equals:ERP))';
   const criteriafi = '((Rolle_der_Person:equals:Anbieter)and(Thema:equals:Fabrik))';
@@ -151,7 +151,6 @@ router.post("/updateData", async (req, res) => {
 
       await Data.create({erp: erpResponse.length, fi: fiResponse.length})
 
-      res.json({ message: "Scheduled task completed successfully" });
     } else {
       return res.status(401).json({ error: "Invalid access token or company Id" })
     }
