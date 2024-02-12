@@ -42,10 +42,22 @@ router.get('/callback', async (req, res) => {
 });
 
 
-router.get("/getData" , isAuthenticated, async (req, res) => {
+router.get("/getData" , async (req, res) => {
   try {
     const data = await Data.find();
-    res.status(200).json({data: data})
+    const erpData = data.reduce((acc, curr) => {
+      acc[curr.createdAt] = curr.erp;
+      return acc;
+    }, {});
+    const fiData = data.reduce((acc, curr) => {
+      acc[curr.createdAt] = curr.fi;
+      return acc;
+    }, {})
+    const mergedData = data.map((item, index) => ({
+      ...erpData[index],
+      ...fiData[index],
+    }));
+    res.status(200).json({erpData: erpData, fiData: fiData, mergedData: mergedData})
   } catch (error) {
     console.log(error)
   }
