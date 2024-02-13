@@ -45,19 +45,8 @@ router.get('/callback', async (req, res) => {
 router.get("/getData" , async (req, res) => {
   try {
     const data = await Data.find();
-    const erpData = data.reduce((acc, curr) => {
-      acc[curr.createdAt] = curr.erp;
-      return acc;
-    }, {});
-    const fiData = data.reduce((acc, curr) => {
-      acc[curr.createdAt] = curr.fi;
-      return acc;
-    }, {})
-    const mergedData = data.map((item, index) => ({
-      ...erpData[index],
-      ...fiData[index],
-    }));
-    res.status(200).json({erpData: erpData, fiData: fiData, mergedData: mergedData})
+    
+    res.status(200).json({data: data})
   } catch (error) {
     console.log(error)
   }
@@ -66,69 +55,81 @@ router.get("/getData" , async (req, res) => {
 router.post("/updateData", async (req, res) => {
   res.json({ message: "Scheduled task started!" });
   const moduleApiName = 'Contacts';
+
+  const izErp = '((Thema:equals:ERP))';
+  const izFi = '((Thema:equals:Fabrik))';
+  const izIm = '((Thema:equals:Industrie%204.0))';
+
   const criteriaerp = '((Rolle_der_Person:equals:Anbieter)and(Thema:equals:ERP))';
-  const criteriafi = '((Rolle_der_Person:equals:Anbieter)and(Thema:equals:Fabrik))';
+  const criteriafi = '((Rolle_der_Person:equals:Anbieter)and((Thema:equals:Fabrik)or(Thema:equals:Industrie%204.0)))';
+  const allBerater = '((Rolle_der_Person:equals:Berater))';
+  const erpBerater = '((Rolle_der_Person:equals:Berater)and(Thema:equals:ERP))';
+  const fiBerater = '((Rolle_der_Person:equals:Berater)and((Thema:equals:Fabrik)or(Thema:equals:Industrie%204.0)))';
 
+  // get total number of contacts
 
-  async function getAllErpRecords(accessToken) {
-    const url = `https://www.zohoapis.com/crm/v3/${moduleApiName}/search?criteria=${criteriaerp}`;
-    let allRecords = [];
-    let nextPage = 1;
-  
-    while (true) {
-      try {
-        const response = await axios.get(`${url}&page=${nextPage}`, {
-          headers: {
-            'Authorization': `Zoho-oauthtoken ${accessToken}`
-          }
-        });
-  
-        const records = response.data.data;
-        allRecords = allRecords.concat(records);
-  
-        // Check if there are more records/pages
-        if (response.data.info.more_records) {
-          nextPage++;
-        } else {
-          break; // No more records, exit the loop
+  async function getNumbers(accessToken) {
+    try {
+      const url = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count`;
+      const urlErp = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${izErp}`;
+      const urlFi = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${izFi}`;
+      const urlIm = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${izIm}`;
+      const urlAnbErp = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${criteriaerp}`;
+      const urlAnbFi = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${criteriafi}`;
+      const urlBerater = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${allBerater}`;
+      const urlErpBerater = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${erpBerater}`;
+      const urlFiBerater = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${fiBerater}`;
+
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
         }
-      } catch (error) {
-        console.error('Error fetching records:', error);
-        break;
-      }
-    }
-  
-    return allRecords;
-  }
-  async function getAllFiRecords(accessToken) {
-    const url = `https://www.zohoapis.com/crm/v3/${moduleApiName}/search?criteria=${criteriafi}`;
-    let allRecords = [];
-    let nextPage = 1;
-  
-    while (true) {
-      try {
-        const response = await axios.get(`${url}&page=${nextPage}`, {
-          headers: {
-            'Authorization': `Zoho-oauthtoken ${accessToken}`
-          }
-        });
-  
-        const records = response.data.data;
-        allRecords = allRecords.concat(records);
-  
-        // Check if there are more records/pages
-        if (response.data.info.more_records) {
-          nextPage++;
-        } else {
-          break; // No more records, exit the loop
+      });
+      const responseErp = await axios.get(urlErp, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
         }
-      } catch (error) {
-        console.error('Cron Error fetching records:', error);
-        break;
-      }
+      });
+      const responseFi = await axios.get(urlFi, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      const responseIm = await axios.get(urlIm, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      const responseAnbErp = await axios.get(urlAnbErp, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      const responseAnbFi = await axios.get(urlAnbFi, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      const responseBerater = await axios.get(urlBerater, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      const responseErpBerater = await axios.get(urlErpBerater, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      const responseFiBerater = await axios.get(urlFiBerater, {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      });
+      return [response.data.count, responseErp.data.count, responseFi.data.count, responseIm.data.count, responseAnbErp.data.count, 
+        responseAnbFi.data.count, responseBerater.data.count, responseErpBerater.data.count, responseFiBerater.data.count];
+    } catch (error) {
+      console.log(error)
     }
-  
-    return allRecords;
   }
 
   const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
@@ -158,10 +159,12 @@ router.post("/updateData", async (req, res) => {
     if (userDocument) {
       const response = await axios.post(tokenUrl, params);
       const accessToken = response.data.access_token;
-      const erpResponse  = await getAllErpRecords(accessToken);
-      const fiResponse = await getAllFiRecords(accessToken);
+     
+      const allResponse = await getNumbers(accessToken);
+      await Data.create({all: allResponse[0], erp: allResponse[1], fi: allResponse[2], im: allResponse[3], anbErp: allResponse[4],
+      anbFiIm: allResponse[5], berater: allResponse[6], beraterErp: allResponse[7], beraterFiIm: allResponse[8]})
 
-      await Data.create({erp: erpResponse.length, fi: fiResponse.length})
+      console.log(allResponse);
 
     } else {
       return res.status(401).json({ error: "Invalid access token or company Id" })
