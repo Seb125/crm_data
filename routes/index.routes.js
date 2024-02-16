@@ -11,7 +11,7 @@ router.get("/", (req, res, next) => {
 
 
 router.get('/authorize', (req, res) => {
-  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCRM.settings.all&client_id=${process.env.CLIENTID}&response_type=code&access_type=offline&redirect_uri=https://crm-statistics.adaptable.app/callback`;
+  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCampaigns.campaign.READ&client_id=${process.env.CLIENTID}&response_type=code&access_type=offline&redirect_uri=https://crm-statistics.adaptable.app/callback`;
   res.redirect(authUrl);
 });
 
@@ -173,5 +173,55 @@ router.post("/updateData", async (req, res) => {
     console.log(error)
   }
 });
+
+router.post("/campaigns", async (req, res) => {
+  
+  async function getRecentCampaigns (access_Token) {
+    const url = "https://campaigns.zoho.com/api/v1.1/recentsentcampaigns";
+    const responseRecentCampaigns = await axios.get(url, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${access_Token}`
+      }
+    });
+
+    return responseRecentCampaigns;
+
+  }
+  const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+  const params = new URLSearchParams({
+    refresh_token: process.env.REFRESH_TOKEN,
+    client_id: process.env.CLIENTID,
+    client_secret: process.env.CLIENTSECRET,
+    grant_type: 'refresh_token',
+  });
+
+  try {
+    const { dataToken } = req.body;
+
+    if (!dataToken) {
+      return res.status(401).json({ error: 'Access token is missing.' });
+    }
+
+    // Check if access token matches with a company_id
+    // For testing create company Document in database: Access Token: access, company_id: 123456
+    const userDocument = await User.findOne({
+      dataToken: dataToken
+    });
+
+    if (userDocument) {
+      // const response = await axios.post(tokenUrl, params);
+      // const accessToken = response.data.access_token;
+     
+      const data = await getRecentCampaigns("1000.35aabf3ea09af68ec2e879387332a700.bdc576a68a17da9490468dc750d7b691");
+      console.log(data)
+      res.json({message: "Update Done"})
+
+    } else {
+      return res.status(401).json({ error: "Invalid access token or company Id" })
+    }
+  } catch (error) {
+    console.log(error)
+  }
+})
  
 module.exports = router;
