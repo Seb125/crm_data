@@ -2,6 +2,7 @@ const router = require("express").Router();
 const axios = require('axios');
 const Data = require("../models/Data.model");
 const User = require("../models/User.model");
+const Campaign = require("../models/Campaign.model");
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const cron = require('node-cron');
 
@@ -175,13 +176,14 @@ router.post("/updateData", async (req, res) => {
 });
 
 router.post("/campaigns", async (req, res) => {
-  
-  async function getRecentCampaigns (access_Token) {
-    const url = "https://campaigns.zoho.com/api/v1.1/recentsentcampaigns";
+  //res.json({ message: "Scheduled task started!" });
+  async function getRecentCampaigns (access_Token, campParams) {
+    const url = "https://campaigns.zoho.com/api/v1.1/recentcampaigns";
     const responseRecentCampaigns = await axios.get(url, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${access_Token}`
-      }
+      },
+      params: campParams
     });
 
     return responseRecentCampaigns;
@@ -209,11 +211,21 @@ router.post("/campaigns", async (req, res) => {
     });
 
     if (userDocument) {
-      // const response = await axios.post(tokenUrl, params);
-      // const accessToken = response.data.access_token;
-     
-      const data = await getRecentCampaigns("1000.35aabf3ea09af68ec2e879387332a700.bdc576a68a17da9490468dc750d7b691");
-      console.log(data)
+      const response = await axios.post(tokenUrl, params);
+      const accessToken = response.data.access_token;
+      // console.log(accessToken)
+      const campParams = new URLSearchParams({
+        status: "sent",
+        resfmt: "JSON",
+        range: 5
+      })
+      const data = await getRecentCampaigns(accessToken, campParams);
+      await Campaign.collection.drop();
+      let myPromises = [];
+      data.data.recent_campaigns.forEach((campaign) => {
+        myPromises.push(Campaign.create({campaign_name: campaign.campaign_name, sent_time: campaign.sent_time, campaign_key: campaign.campaign_key, campaign_preview: campaign.campaign_preview}))
+      });
+      await Promise.all(myPromises);
       res.json({message: "Update Done"})
 
     } else {
