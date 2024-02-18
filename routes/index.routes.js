@@ -46,8 +46,9 @@ router.get('/callback', async (req, res) => {
 router.get("/getData" , async (req, res) => {
   try {
     const data = await Data.find();
-    
-    res.status(200).json({data: data})
+    const campaignsData = await Campaign.find();
+    console.log(campaignsData.slice(0,10))
+    res.status(200).json({data: data, campaigns: campaignsData.slice(0,10)})
   } catch (error) {
     console.log(error)
   }
@@ -215,9 +216,9 @@ router.post("/campaigns", async (req, res) => {
       const accessToken = response.data.access_token;
       // console.log(accessToken)
       const campParams = new URLSearchParams({
-        status: "sent",
         resfmt: "JSON",
-        range: 5
+        sort: "desc",
+        status: "sent"
       })
       const data = await getRecentCampaigns(accessToken, campParams);
       await Campaign.collection.drop();
