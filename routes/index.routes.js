@@ -46,7 +46,8 @@ router.get('/callback', async (req, res) => {
 router.get("/getData" , async (req, res) => {
   try {
     const data = await Data.find();
-    const campaignsData = await Campaign.find();
+    const campaignsData = await Campaign.find().sort({sent_time: -1});
+
     console.log(campaignsData.slice(0,10))
     res.status(200).json({data: data, campaigns: campaignsData.slice(0,10)})
   } catch (error) {
