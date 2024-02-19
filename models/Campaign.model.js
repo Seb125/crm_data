@@ -14,7 +14,15 @@ const campaignSchema = new Schema(
     },
     campaign_preview: {
         type: String
+    },
+    count_sent: {
+      type: Number
+    },
+    details: {
+      type: Schema.Types.ObjectId, // Assuming you want to store the ObjectId of the related Detail document
+      ref: 'Detail' 
     }
+
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`

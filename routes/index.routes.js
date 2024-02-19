@@ -3,6 +3,7 @@ const axios = require('axios');
 const Data = require("../models/Data.model");
 const User = require("../models/User.model");
 const Campaign = require("../models/Campaign.model");
+const Detail = require("../models/Detail.model");
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const cron = require('node-cron');
 
@@ -43,13 +44,13 @@ router.get('/callback', async (req, res) => {
 });
 
 
-router.get("/getData" , async (req, res) => {
+router.get("/getData", isAuthenticated, async (req, res) => {
   try {
     const data = await Data.find();
-    const campaignsData = await Campaign.find().sort({sent_time: -1});
+    const campaignsData = await Campaign.find().populate("details");
 
     console.log(campaignsData.slice(0,10))
-    res.status(200).json({data: data, campaigns: campaignsData.slice(0,10)})
+    res.status(200).json({data: data, campaigns: campaignsData})
   } catch (error) {
     console.log(error)
   }
@@ -191,6 +192,19 @@ router.post("/campaigns", async (req, res) => {
     return responseRecentCampaigns;
 
   }
+  async function getDetails(access_Token, campaignKey) {
+    const url = "https://campaigns.zoho.com/api/v1.1/getcampaigndetails";
+    const reponseCampDetails = await axios.get(url, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${access_Token}`
+      },
+      params: {
+        resfmt: "JSON",
+        campaignkey: campaignKey
+      }
+    });
+    return reponseCampDetails;
+  }
   const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
   const params = new URLSearchParams({
     refresh_token: process.env.REFRESH_TOKEN,
@@ -215,19 +229,55 @@ router.post("/campaigns", async (req, res) => {
     if (userDocument) {
       const response = await axios.post(tokenUrl, params);
       const accessToken = response.data.access_token;
-      // console.log(accessToken)
+      console.log(accessToken)
       const campParams = new URLSearchParams({
         resfmt: "JSON",
         sort: "desc",
-        status: "sent"
+        status: "sent",
+        range: 10
       })
       const data = await getRecentCampaigns(accessToken, campParams);
+      const details = await getDetails(accessToken,"3zff55f4732d7273c40821a5488bbd68e6fb8dd03b8e2302b3594a67e8e23a5140" );
+      console.log(details.data)
+      const sortedData = data.data.recent_campaigns.sort((a,b) => b.sent_time - a.sent_time).slice(0, 10);
+      console.log("recent", sortedData);
       await Campaign.collection.drop();
       let myPromises = [];
-      data.data.recent_campaigns.forEach((campaign) => {
-        myPromises.push(Campaign.create({campaign_name: campaign.campaign_name, sent_time: campaign.sent_time, campaign_key: campaign.campaign_key, campaign_preview: campaign.campaign_preview}))
+      sortedData.forEach((campaign) => {
+        myPromises.push(
+            getDetails(accessToken, campaign.campaign_key)
+            .then((response) => {
+              if(response.data["campaign-reports"][0].emails_sent_count > 30) {
+              return Detail.create({count_sent: response.data["campaign-reports"][0].emails_sent_count, 
+                count_delivered: response.data["campaign-reports"][0].delivered_count, 
+                percent_delivered: response.data["campaign-reports"][0].delivered_percent,
+                percent_open: response.data["campaign-reports"][0].open_percent,
+                unique_clicked_percent: response.data["campaign-reports"][0].unique_clicked_percent,
+                clicksperopenrate: response.data["campaign-reports"][0].clicksperopenrate
+
+
+              }) } else {
+                return null;
+              }
+            })
+            .then((detail) => {
+              return Campaign.create({campaign_name: campaign.campaign_name, 
+                sent_time: campaign.sent_time, 
+                campaign_key: campaign.campaign_key, 
+                campaign_preview: campaign.campaign_preview,
+                details: detail._id
+              })
+            })
+            .catch((error) => {
+              console.log(error)
+            })
+          )
       });
       await Promise.all(myPromises);
+      
+
+
+
       res.json({message: "Update Done"})
 
     } else {
