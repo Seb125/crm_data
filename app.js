@@ -5,7 +5,7 @@ require("dotenv").config();
 // ℹ️ Connects to the database
 require("./db");
 
-//require("./cron")
+require("./cron")
 
 // Handles http requests (express is node js framework)
 // https://www.npmjs.com/package/express
@@ -30,6 +30,9 @@ require("./config")(app);
 // 👇 Start handling routes here
 const indexRoutes = require("./routes/index.routes");
 app.use("/", indexRoutes);
+
+
+
 
 const authRoutes = require("./routes/auth.routes");
 app.use("/auth", authRoutes);
