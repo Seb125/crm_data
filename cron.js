@@ -1,8 +1,8 @@
 const schedule = require("node-schedule");
 
-const job = schedule.scheduleJob("0 12 * * *", function () {
+const job = schedule.scheduleJob("0 13 * * *", function () {
   // update CRM data
-
+  console.log("Scheduled Job started")
   const moduleApiName = "Contacts";
 
   const izErp = "((Thema:equals:ERP))";
