@@ -239,7 +239,7 @@ router.post("/campaigns", async (req, res) => {
       const data = await getRecentCampaigns(accessToken, campParams);
       //const details = await getDetails(accessToken,"3zff55f4732d7273c40821a5488bbd68e6fb8dd03b8e2302b3594a67e8e23a5140" );
       //console.log(details.data)
-      const sortedData = data.data.recent_campaigns.sort((a,b) => b.sent_time - a.sent_time).slice(0, 10);
+      const sortedData = data.data.recent_campaigns.sort((a,b) => b.sent_time - a.sent_time).slice(0, 20);
       console.log("recent", sortedData);
       await Campaign.collection.drop();
       let myPromises = [];
