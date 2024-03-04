@@ -23,6 +23,7 @@
     "node-schedule": "^2.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.0.3",
+    "typescript": "^5.3.3"
   }
 }
