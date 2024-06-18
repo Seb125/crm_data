@@ -1,45 +1,63 @@
 const router = require("express").Router();
-const axios = require('axios');
+const axios = require("axios");
 const Data = require("../models/Data.model");
 const User = require("../models/User.model");
 const Campaign = require("../models/Campaign.model");
 const Detail = require("../models/Detail.model");
 const { isAuthenticated } = require("../middleware/jwt.middleware");
-const cron = require('node-cron');
-
-router.get("/", (req, res, next) => {
-  res.json("All good in here");
-});
+const cron = require("node-cron");
+const XLSX = require('xlsx');
+const path = require('path');
 
 
-router.get('/authorize', (req, res) => {
-  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.READ,ZohoCampaigns.campaign.READ&client_id=${process.env.CLIENTID}&response_type=code&access_type=offline&redirect_uri=https://crm-statistics.adaptable.app/callback`;
+
+router.get("/readData", (req, res) => {
+
+  function importNumbersDocument(filePath) {
+    
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0]; // Assuming the first sheet is the one you want to import
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet);
+    
+    return rows;
+  }
+  const fileName = 'test.xlsx';
+  const filePath = path.join(__dirname, fileName);
+  
+  const dataArray = importNumbersDocument(filePath);
+  console.log(dataArray)
+})
+
+
+router.get("/authorize", (req, res) => {
+  const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.ALL,ZohoCRM.settings.ALL&client_id=${process.env.CLIENTID}&response_type=code&access_type=offline&redirect_uri=http://localhost:5005/callback`;
   res.redirect(authUrl);
 });
 
-router.get('/callback', async (req, res) => {
+router.get("/callback", async (req, res) => {
   const code = req.query.code;
-  console.log(code)
-  const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+  console.log(code);
+  const tokenUrl = "https://accounts.zoho.com/oauth/v2/token";
   const params = new URLSearchParams({
     code,
     client_id: process.env.CLIENTID,
     client_secret: process.env.CLIENTSECRET,
     redirect_uri: process.env.REDIRECTURI,
-    grant_type: 'authorization_code',
+    grant_type: "authorization_code",
   });
 
   try {
     const response = await axios.post(tokenUrl, params);
-    
-    console.log("all good so far")
+
+    console.log("all good so far");
     // Use the access token to make API requests to Zoho CRM
     // ...
 
-    res.status(200).json({response: response.data });
+    res.status(200).json({ response: response.data });
   } catch (error) {
-    console.error('Error getting access token:', error.message);
-    res.status(500).send('Error getting access token');
+    console.error("Error getting access token:", error.message);
+    res.status(500).send("Error getting access token");
   }
 });
 
@@ -84,133 +102,84 @@ router.post("/updateData", async (req, res) => {
       const urlErpBerater = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${erpBerater}`;
       const urlFiBerater = `https://www.zohoapis.com/crm/v3/${moduleApiName}/actions/count?criteria=${fiBerater}`;
 
-      const response = await axios.get(url, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseErp = await axios.get(urlErp, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseFi = await axios.get(urlFi, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseIm = await axios.get(urlIm, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseAnbErp = await axios.get(urlAnbErp, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseAnbFi = await axios.get(urlAnbFi, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseBerater = await axios.get(urlBerater, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseErpBerater = await axios.get(urlErpBerater, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      const responseFiBerater = await axios.get(urlFiBerater, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`
-        }
-      });
-      return [response.data.count, responseErp.data.count, responseFi.data.count, responseIm.data.count, responseAnbErp.data.count, 
-        responseAnbFi.data.count, responseBerater.data.count, responseErpBerater.data.count, responseFiBerater.data.count];
-    } catch (error) {
-      console.log(error)
-    }
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`,
+      },
+    });
+    return response;
   }
-
-  const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+  const tokenUrl = "https://accounts.zoho.com/oauth/v2/token";
   const params = new URLSearchParams({
     refresh_token: process.env.REFRESH_TOKEN,
     client_id: process.env.CLIENTID,
     client_secret: process.env.CLIENTSECRET,
-    grant_type: 'refresh_token',
+    grant_type: "refresh_token",
   });
 
   try {
-
-    // first check if the access token is valid
-
-    const { dataToken } = req.body;
-
-    if (!dataToken) {
-      return res.status(401).json({ error: 'Access token is missing.' });
-    }
-
-    // Check if access token matches with a company_id
-    // For testing create company Document in database: Access Token: access, company_id: 123456
-    const userDocument = await User.findOne({
-      dataToken: dataToken
-    });
-
-    if (userDocument) {
-      const response = await axios.post(tokenUrl, params);
-      const accessToken = response.data.access_token;
-     
-      const allResponse = await getNumbers(accessToken);
-      await Data.create({all: allResponse[0], erp: allResponse[1], fi: allResponse[2], im: allResponse[3], anbErp: allResponse[4],
-      anbFiIm: allResponse[5], berater: allResponse[6], beraterErp: allResponse[7], beraterFiIm: allResponse[8]})
-
-      console.log(allResponse);
-
-    } else {
-      return res.status(401).json({ error: "Invalid access token or company Id" })
-    }
+    const response = await axios.post(tokenUrl, params);
+    const accessToken = response.data.access_token;
+    
+    const responseAPI = await getData(accessToken);
+    
+    
+    res.status(200).json({message: responseAPI.data.fields});
   } catch (error) {
     console.log(error)
   }
 });
 
-router.post("/campaigns", async (req, res) => {
-  //res.json({ message: "Scheduled task started!" });
-  async function getRecentCampaigns (access_Token, campParams) {
-    const url = "https://campaigns.zoho.com/api/v1.1/recentcampaigns";
-    const responseRecentCampaigns = await axios.get(url, {
-      headers: {
-        'Authorization': `Zoho-oauthtoken ${access_Token}`
-      },
-      params: campParams
-    });
-
-    return responseRecentCampaigns;
-
+router.get("/update", async (req, res) => {
+  // first I need to import the xlsx data
+  function importNumbersDocument(filePath) {
+    
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0]; // Assuming the first sheet is the one you want to import
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet);
+    
+    return rows;
   }
-  async function getDetails(access_Token, campaignKey) {
-    const url = "https://campaigns.zoho.com/api/v1.1/getcampaigndetails";
-    const reponseCampDetails = await axios.get(url, {
-      headers: {
-        'Authorization': `Zoho-oauthtoken ${access_Token}`
+  const fileName = 'test.xlsx'; // this is my data
+  const filePath = path.join(__dirname, fileName);
+  // data is an array of objects with field to be updated
+  const dataArray = importNumbersDocument(filePath);  
+
+  const updateAccountData = async (accessToken, row) => {
+    try {
+      const response = await axios.put(`https://www.zohoapis.com/crm/v2/Accounts/${row.ID}`, 
+      {
+        data: [
+          // empyt fields should not be updated 
+          {
+            ...(row.AccountName && { "Account_Name": row.AccountName }),
+            ...(row.Strasse && { "Billing_Street": row.Strasse }),
+            ...(row.PLZ && { "Billing_Code": row.PLZ.toString() }),
+            ...(row.Ort && { "Billing_City": row.Ort }),
+            ...(row.Website && { "Website": row.Website })
+
+             // Specify the new name for the account
+          }
+        ]
       },
-      params: {
-        resfmt: "JSON",
-        campaignkey: campaignKey
+      {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
       }
-    });
-    return reponseCampDetails;
+    );
+    } catch (error) {
+      console.log(error)
+    }
   }
-  const tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+  const tokenUrl = "https://accounts.zoho.com/oauth/v2/token";
   const params = new URLSearchParams({
     refresh_token: process.env.REFRESH_TOKEN,
     client_id: process.env.CLIENTID,
     client_secret: process.env.CLIENTSECRET,
-    grant_type: 'refresh_token',
+    grant_type: "refresh_token",
   });
 
   try {
@@ -286,6 +255,6 @@ router.post("/campaigns", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-})
- 
+});
+
 module.exports = router;

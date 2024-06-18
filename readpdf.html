@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Text Extraction</title>
+    <!-- Include pdf.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.js"></script>
+</head>
+<body>
+    <script>
+        // URL of the PDF file
+        const pdfUrl = 'Test_one_file.pdf';
+
+        // Asynchronous function to load and parse PDF
+        async function getPdfText(url) {
+            // Fetch PDF document
+            const pdfDoc = await pdfjsLib.getDocument(url).promise;
+
+            // Initialize array to store text content
+            const pageTextPromises = [];
+
+            // Loop through each page to extract text
+            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                // Get page text content
+                const page = await pdfDoc.getPage(pageNum);
+                const pageTextPromise = page.getTextContent();
+                pageTextPromises.push(pageTextPromise);
+            }
+
+            // Wait for all pages to be processed
+            const pageTexts = await Promise.all(pageTextPromises);
+            const pageTextsArray = [];
+            // Combine text items from each page into a single string
+            pageTexts.forEach((pageText) => {
+                let pdfText = '';
+                pageText.items.forEach((item) => {
+                    pdfText += item.str + ' ';
+                });
+                pageTextsArray.push(pdfText)
+            });
+
+            return pageTextsArray;
+        }
+
+        // Usage example
+        getPdfText(pdfUrl)
+            .then((text) => {
+                console.log('Text content of PDF:', text);
+                // Use the extracted text as needed
+                fetch("http://localhost:5005/newsdb", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({text: text})
+                });
+            })
+            .catch((err) => {
+                console.error('Error while loading PDF:', err);
+            });
+    </script>
+</body>
+</html>
